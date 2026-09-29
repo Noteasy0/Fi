@@ -1082,7 +1082,7 @@ function assump(keys) {
     fee: () => fld('assump.fee', 'ค่าธรรมเนียมการลงทุน', { unit: '%/ปี', step: .05, max: 10 }),
     tax: () => fld('assump.tax', 'ภาษีจากผลตอบแทน', { unit: '%', step: 1, max: 60 })
   };
-  return `<details class="assump"><summary>${ic('settings')}<b>สมมติฐาน</b><span class="muted" data-out="assumSum"></span></summary><div class="in"><div class="form">${keys.map(k => F[k]()).join('')}</div>${note(MODEL_NOTE + ' — ' + DISC)}</div></details>`;
+  return `<details class="assump"><summary><b>สมมติฐาน</b><span class="muted" data-out="assumSum"></span></summary><div class="in"><div class="form">${keys.map(k => F[k]()).join('')}</div>${note(MODEL_NOTE + ' — ' + DISC)}</div></details>`;
 }
 const GLOBAL_OUTS = {
   assumSum: () => { const A = S.assump; return `Scenario ${{ cons: 'Conservative', base: 'Base', aggr: 'Aggressive' }[A.scenario]} · ผลตอบแทนสุทธิ ${pct(retRate(A.scenario) * 100, 2)} · เงินเฟ้อ ${pct(A.inflation)} · WR ${pct(A.wr)}`; }
