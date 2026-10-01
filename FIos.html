@@ -209,7 +209,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:8px;font-size:12.5px;color:var(--tx2)}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:baseline}
 .dn{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
-.dn svg{flex:none}.dn ul{list-style:none;margin:0;padding:0;flex:1;min-width:150px;font-size:13.5px}
+.dn svg{flex:none;width:auto;max-width:100%;height:auto}.dn ul{list-style:none;margin:0;padding:0;flex:1;min-width:150px;font-size:13.5px}
 .dn li{display:flex;align-items:center;gap:8px;padding:3px 0}.dn li i{width:9px;height:9px;border-radius:3px;flex:none}
 .dn li span{flex:1;color:var(--tx2)}.dn li b{font:500 12.5px var(--mono)}
 #tip{position:fixed;z-index:200;pointer-events:none;background:var(--card2);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.5;box-shadow:0 12px 30px -8px rgba(0,0,0,.5);max-width:280px;opacity:0;transition:opacity .08s}
@@ -232,6 +232,9 @@ body.eng .formula{display:block}
 .assump>summary::-webkit-details-marker{display:none}
 .assump>summary b{color:var(--tx);font-weight:600}
 .assump>summary:after{content:"แก้ไข";margin-left:auto;font-size:12px;color:var(--ac)}
+:where(svg[aria-hidden="true"]:not([width])){width:16px;height:16px;flex:none}
+.assump>summary{flex-wrap:wrap}.assump>summary span{flex:1;min-width:0;font-size:13px}
+.stat .l svg{width:14px;height:14px;color:var(--ok)}
 .assump[open]>summary:after{content:"ซ่อน"}
 .assump .in{padding:4px 14px 14px;border-top:1px solid var(--line)}
 .assump .in .form{margin:12px 0}
@@ -256,6 +259,17 @@ body.eng .formula{display:block}
 .opt{border:1px solid var(--line2);background:var(--card);color:var(--tx2);border-radius:20px;padding:4px 11px;font-size:13px;cursor:pointer;transition:all .12s}
 .opt:hover{color:var(--tx);border-color:var(--tx3)}
 .opt[aria-pressed="true"]{background:var(--acbg);border-color:var(--ac);color:var(--ac)}
+.tor{display:grid;gap:16px}
+.tor-row{display:grid;grid-template-columns:172px 1fr;gap:14px;align-items:center}
+.tor-label{font-size:13.5px;color:var(--tx);line-height:1.3}
+.tor-label small{display:block;color:var(--tx3);font-size:11.5px;font-weight:400;margin-top:1px}
+.tor-track{position:relative;height:20px;background:var(--line);border-radius:6px}
+.tor-seg{position:absolute;top:0;height:100%;opacity:.85}
+.tor-seg:first-child{border-radius:6px 0 0 6px}.tor-seg:last-child{border-radius:0 6px 6px 0}
+.tor-base{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--tx3);transform:translateX(-1px)}
+.tor-end{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;background:var(--bg);transform:translate(-50%,-50%);border:2px solid;cursor:help}
+.tor-vals{display:flex;justify-content:space-between;font:500 11.5px var(--mono);color:var(--tx3);margin-top:4px}
+@media (max-width:640px){.tor-row{grid-template-columns:1fr}.tor-label{margin-bottom:2px}}
 .skill{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;padding:3px 0;font-size:13.5px}
 .skill b{font:500 12.5px var(--mono);text-align:right}
 .badge-lg{font-size:13px;height:26px;padding:0 11px}
@@ -459,7 +473,7 @@ function blank() {
     v: 1,
     meta: { created: isoDate(), demo: false, welcomed: false },
     profile: { name: '', age: 23, gender: '', location: '', occupation: 'Software / Computer Engineer', major: 'Computer Engineering', gradYear: new Date().getFullYear(), workStatus: 'employed', relationship: 'single', kids: 0, dependents: 0, retireAge: 60, fiModel: 'traditional', fiTargetAge: 45, tech: 'junior', english: 'intermediate', experience: 0, notes: '' },
-    income: Object.assign({ taxRate: 5, scenario: 'base', g: { cons: 3, base: 6, aggr: 10 } }, Object.fromEntries(INC.map(([k]) => [k, 0]))),
+    income: Object.assign({ taxRate: 5, taxMethod: 'flat', ssoOverride: null, rmfssf: 0, otherDeduct: 0, scenario: 'base', g: { cons: 3, base: 6, aggr: 10 } }, Object.fromEntries(INC.map(([k]) => [k, 0]))),
     expenses: ex,
     assets: as,
     debts: [],
@@ -582,7 +596,7 @@ function download(name, content, type) {
 const csvCell = v => { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 const csvRows = rows => rows.map(r => r.map(csvCell).join(',')).join('\r\n');
 const CSV_SETS = {
-  income: ['Income', () => [['Source', 'Monthly THB'], ...INC.map(([k, l]) => [l, N(S.income[k])]), ['Side projects (net)', D().inc.sideNet], ['Gross monthly', D().inc.gross], ['Net monthly', D().inc.net]]],
+  income: ['Income', () => { const d = D().inc; return [['Source', 'Monthly THB'], ...INC.map(([k, l]) => [l, N(S.income[k])]), ['Side projects (net)', d.sideNet], ['Gross monthly', d.gross], ['Tax method', d.method === 'progressive' ? 'Progressive' : 'Flat'], ['Income tax/month', Math.round(d.taxOnly)], ['Social security/month', Math.round(d.sso)], ['Net monthly', d.net], ['Effective tax rate %', +d.effRate.toFixed(2)]]; }],
   expenses: ['Expenses', () => [['Category', 'Monthly THB', 'Essential', 'Minimum'], ...EXP_CATS.map(([k, l]) => [l, N(S.expenses[k].amt), S.expenses[k].ess ? 'yes' : 'no', N(S.expenses[k].min)])]],
   investments: ['Investments', () => { const p = proj(); return [['Year', 'Age', 'Beginning', 'Contribution', 'Growth', 'Ending', 'FI Target'], ...p.rows.map(r => [r.t, r.age, Math.round(r.beg), Math.round(r.contrib), Math.round(r.growth), Math.round(r.end), Math.round(r.target)])]; }],
   networth: ['NetWorthHistory', () => [['Date', 'Net Worth', 'Assets', 'Debt', 'Invested'], ...S.nwHistory.map(h => [h.d, h.nw, h.assets, h.debt, h.invested])]],
@@ -605,9 +619,27 @@ function touch(immediate) { _d = null; if (immediate) saveData(false); else { se
 
 /* return helpers: nominal return after fee & tax drag; real return */
 function netRet(pctv) { const A = S.assump; return (N(pctv) / 100) * (1 - clamp(N(A.tax), 0, 90) / 100) - N(A.fee) / 100; }
+const taxRatePct = () => clamp(D().inc.effRate, 0, 60); /* ใช้อัตราภาษีเฉลี่ยที่แท้จริง (รองรับทั้งแบบ Flat และแบบขั้นบันได) */
 function retRate(kind) { const A = S.assump; return netRet(A.ret[kind] != null ? A.ret[kind] : A.ret.base); }
 function calculateRealReturn(nominal, infl) { return div(1 + nominal, 1 + infl, 1) - 1; }
 const inflR = () => N(S.assump.inflation) / 100;
+
+/* ---------- Thai Personal Income Tax (progressive, simplified) ----------
+   เป็นการประมาณการเพื่อวางแผน ไม่ใช่การคำนวณภาษีที่ใช้ยื่นจริง เพราะกฎจริงมีรายละเอียดเพิ่มเติม
+   (ประเภทเงินได้ 8 ประเภท มีอัตราหักค่าใช้จ่ายต่างกัน, ลดหย่อนอื่น ๆ อีกมาก) โปรดตรวจสอบกับกรมสรรพากรหรือผู้เชี่ยวชาญภาษี */
+const PIT_THRESH = [150000, 300000, 500000, 750000, 1000000, 2000000, 5000000, Infinity];
+const PIT_RATES = [0, 5, 10, 15, 20, 25, 30, 35];
+function pitBrackets(taxable) {
+  const rows = []; let prev = 0;
+  for (let i = 0; i < PIT_THRESH.length && taxable > prev; i++) {
+    const to = PIT_THRESH[i], amt = Math.max(0, Math.min(taxable, to) - prev);
+    rows.push({ from: prev, to: Number.isFinite(to) ? to : null, rate: PIT_RATES[i], amt, tax: amt * PIT_RATES[i] / 100 });
+    prev = to;
+  }
+  return rows;
+}
+function calculatePIT(taxable) { return sum(pitBrackets(Math.max(0, N(taxable))), r => r.tax); }
+function calcSSOAuto() { return clamp(N(S.income.base), 0, 15000) * 0.05; } /* ประกันสังคม 5% ของค่าจ้าง เพดาน 15,000 → สูงสุด 750/เดือน */
 
 function derive() {
   const I = S.income, A = S.assump, a = S.assets, d = { _p: {} };
@@ -616,10 +648,23 @@ function derive() {
   const main = N(I.base) + N(I.overtime) + N(I.bonus) + N(I.commission);
   const sideManual = N(I.freelance) + N(I.sideBusiness) + N(I.digital) + N(I.software) + N(I.game);
   const gross = main + sideManual + sideNet + N(I.invInc) + N(I.otherInc);
-  const tax = Math.max(0, gross) * clamp(N(I.taxRate), 0, 60) / 100;
+  const grossA0 = Math.max(0, gross) * 12;
+  let tax, sso = 0, taxOnly, taxableA = null, pitRows = null, deduct = null;
+  if (I.taxMethod === 'progressive') {
+    const empDeduct = Math.min(grossA0 * 0.5, 100000), personal = 60000;
+    sso = (I.ssoOverride != null ? Math.max(0, N(I.ssoOverride)) : calcSSOAuto() * 12) / 12;
+    const rmf = Math.min(Math.max(0, N(I.rmfssf)), grossA0 * 0.3, 500000), other = Math.max(0, N(I.otherDeduct));
+    taxableA = Math.max(0, grossA0 - empDeduct - personal - sso * 12 - rmf - other);
+    pitRows = pitBrackets(taxableA); const annualTax = sum(pitRows, r => r.tax);
+    taxOnly = annualTax / 12; tax = taxOnly + sso;
+    deduct = { empDeduct, personal, sso: sso * 12, rmf, other, taxableA, annualTax };
+  } else {
+    taxOnly = Math.max(0, gross) * clamp(N(I.taxRate), 0, 60) / 100; tax = taxOnly;
+  }
   const net = gross - tax;
   const nonSalary = sideManual + sideNet + N(I.invInc) + N(I.otherInc);
-  d.inc = { main, sideManual, sideNet, side: sideManual + sideNet, invInc: N(I.invInc), other: N(I.otherInc), gross, tax, net, grossA: gross * 12, netA: net * 12, nonSalary, nonSalaryShare: div(nonSalary, gross) };
+  const effRate = grossA0 > 0 ? (tax * 12) / grossA0 * 100 : N(I.taxRate);
+  d.inc = { main, sideManual, sideNet, side: sideManual + sideNet, invInc: N(I.invInc), other: N(I.otherInc), gross, tax, taxOnly, sso, net, grossA: gross * 12, netA: net * 12, nonSalary, nonSalaryShare: div(nonSalary, gross), method: I.taxMethod, taxableA, pitRows, deduct, effRate };
   /* expenses */
   let tot = 0, ess = 0, mn = 0;
   EXP_CATS.forEach(([k]) => { const e = S.expenses[k]; tot += N(e.amt); if (e.ess) ess += N(e.amt); mn += N(e.min); });
@@ -780,20 +825,20 @@ function calculateCareerImpact() {
   const cur = N(S.income.base), tgt = N(S.career.targetSalary), gap = tgt - cur, d = D();
   const tAge = N(S.profile.fiTargetAge), req = requiredMonthly(tAge);
   const extraInv = req == null ? null : Math.max(0, req - d.monthly);
-  return { cur, tgt, gap, req, extraInv, extraGross: extraInv == null ? null : extraInv / (1 - clamp(N(S.income.taxRate), 0, 60) / 100), tAge };
+  return { cur, tgt, gap, req, extraInv, extraGross: extraInv == null ? null : extraInv / (1 - taxRatePct() / 100), tAge };
 }
 function skillUpgrade() {
   const u = S.career.upg, d = D(), A = S.assump, cg = N(A.cg) / 100, delay = clamp(Math.round(N(u.delay)), 0, 20);
   const base = d.monthly;
   const without = projectBase(null, {});
   const withU = projectBase(null, { contrib: t => (base + (t > delay ? N(u.extra) : 0)) * 12 * Math.pow(1 + cg, t - 1) });
-  const raiseNet = (N(u.newSalary) - N(S.income.base)) * (1 - clamp(N(S.income.taxRate), 0, 60) / 100);
+  const raiseNet = (N(u.newSalary) - N(S.income.base)) * (1 - taxRatePct() / 100);
   return { without, withU, raiseNet, delay };
 }
 
 /* ---------- Simulators ---------- */
 function scenRun(sc) {
-  const A = S.assump, d = D(), tax = 1 - clamp(N(S.income.taxRate), 0, 60) / 100;
+  const A = S.assump, d = D(), tax = 1 - taxRatePct() / 100;
   const age = clamp(N(S.profile.age), 15, 80), years = clamp(Math.round(N(A.horizonAge) - age), 1, HOR_MAX);
   const wr = Math.max(0.5, N(A.wr)) / 100, net0 = (N(sc.salary) + N(sc.side)) * tax, exp0 = N(sc.expense) * 12;
   const cg = N(sc.cg) / 100, eg = N(sc.eg) / 100, share = clamp(N(sc.share), 0, 100) / 100;
@@ -910,6 +955,30 @@ function milestones() {
 }
 
 /* ---------- Next actions (options, not orders) ---------- */
+/* ---------- Actual vs Plan (ของจริงเทียบแผน) ----------
+   เทียบตัวเลขจริงที่บันทึกใน Monthly Review กับ "แผนปัจจุบัน" (สมมติฐานและตัวเลขล่าสุดในระบบ ณ ตอนนี้)
+   เส้น Net Worth แผนเป็นการจำลองย้อนหลังจากเดือนที่บันทึกครั้งแรก โดยใช้สมมติฐานปัจจุบัน — ไม่ใช่แผนที่ตั้งไว้จริง ณ ขณะนั้น เพราะแอปไม่ได้เก็บประวัติการเปลี่ยนสมมติฐาน */
+const monthsBetween = (a, b) => { const [y1, m1] = a.split('-').map(Number), [y2, m2] = b.split('-').map(Number); return (y2 - y1) * 12 + (m2 - m1); };
+function actualVsPlan() {
+  const R = S.monthlyReviews.slice().sort((a, b) => a.month < b.month ? -1 : 1);
+  if (!R.length) return null;
+  const d = D(), planInc = d.inc.net, planExp = d.exp.total, planInv = d.monthly;
+  const rows = R.map(r => ({ month: r.month, incA: N(r.income), expA: N(r.expense), invA: N(r.invest), nwA: N(r.nw) }));
+  const incAvg = sum(rows, r => r.incA) / rows.length, expAvg = sum(rows, r => r.expA) / rows.length, invAvg = sum(rows, r => r.invA) / rows.length;
+  let streak = 0; for (let i = rows.length - 1; i >= 0; i--) { if (rows[i].expA > planExp) streak++; else break; }
+  let nwSeries = null, lastGapPct = null;
+  if (rows.length >= 2) {
+    const m0 = rows[0].month, ret = retRate(S.assump.scenario), rm = Math.pow(1 + ret, 1 / 12) - 1, cg = N(S.assump.cg) / 100;
+    const totalMonths = Math.max(1, monthsBetween(m0, rows[rows.length - 1].month));
+    let bal = rows[0].nwA; const byOffset = { 0: bal };
+    for (let m = 1; m <= totalMonths; m++) { const yr = Math.floor((m - 1) / 12); bal = bal * (1 + rm) + planInv * Math.pow(1 + cg, yr); byOffset[m] = bal; }
+    nwSeries = rows.map(r => ({ month: r.month, actual: r.nwA, plan: byOffset[monthsBetween(m0, r.month)] }));
+    const last = nwSeries[nwSeries.length - 1];
+    if (last.plan) lastGapPct = (last.actual - last.plan) / Math.abs(last.plan) * 100;
+  }
+  return { rows, incAvg, expAvg, invAvg, planInc, planExp, planInv, streak, nwSeries, lastGapPct };
+}
+
 function nextActions() {
   const d = D(), R = S.rules, A = []; const hasIncome = d.inc.net > 0;
   const add = (tone, title, text, page, icon) => A.push({ tone, title, text, page, icon });
@@ -926,6 +995,9 @@ function nextActions() {
   if (N(S.career.targetSalary) > N(S.income.base) && d.avgSkill >= 50) add('', 'มีช่องว่างระหว่างเงินเดือนปัจจุบันกับเป้าหมาย', `ต่างกัน ${thb(N(S.career.targetSalary) - N(S.income.base))}/เดือน ตัวเลือก: ดูผลของการยกระดับทักษะต่อ FI`, 'career', 'career');
   if (d.inc.side <= 0 && S.owned.items.length === 0) add('', 'ยังไม่มี Side Income หรือสินทรัพย์ที่สร้างเอง', 'ตัวเลือก: ลองสำรวจสินทรัพย์ดิจิทัลหรือโปรเจกต์ที่สร้างรายได้นอกเงินเดือน', 'side', 'side');
   if (!S.nwHistory.length) add('', 'ยังไม่เคยบันทึก Net Worth Snapshot', 'การบันทึกเป็นประจำช่วยให้เห็นแนวโน้มในกราฟ', 'networth', 'networth');
+  const avp = actualVsPlan();
+  if (avp && avp.streak >= 2) add('warn', `ค่าใช้จ่ายจริงสูงกว่าแผนติดต่อกัน ${avp.streak} เดือนล่าสุด`, `เฉลี่ย ${thb(avp.expAvg)}/เดือน เทียบแผน ${thb(avp.planExp)} ตัวเลือก: ทบทวนค่าใช้จ่ายหรือปรับแผนให้สอดคล้องความเป็นจริงมากขึ้น`, 'monthly', 'calendar');
+  if (avp && avp.lastGapPct != null && avp.lastGapPct < -10) add('warn', 'Net Worth จริงตามหลังแผนที่จำลองไว้', `ต่างจากแผนประมาณ ${pct(Math.abs(avp.lastGapPct), 0)} ตัวเลือก: ดูรายละเอียดที่หน้า Monthly Review แล้วปรับสมมติฐานหรือแผนการลงทุน`, 'monthly', 'calendar');
   if (!A.length) add('ok', 'ตัวชี้วัดหลักอยู่ในเกณฑ์ที่คุณตั้งไว้', 'ตัวเลือก: ทดลองสมมติฐานอื่นใน Scenario Simulator หรือทบทวนเป้าหมายประจำปี', 'scenario', 'scenario');
   return A.slice(0, 6);
 }
@@ -1009,7 +1081,7 @@ const ICN = {
   refresh: '<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>'
 };
-const ic = (n, c = '') => `<svg class="${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICN[n] || ''}</svg>`;
+const ic = (n, c = '') => `<svg class="${c}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICN[n] || ''}</svg>`;
 const NAV = [
   ['ภาพรวม', [['dashboard', 'Dashboard', 'dashboard']]],
   ['พื้นฐานการเงิน', [['profile', 'Profile', 'user'], ['income', 'Income', 'income'], ['expenses', 'Expenses', 'expenses'], ['networth', 'Net Worth', 'networth'], ['emergency', 'Emergency Fund', 'shield'], ['debt', 'Debt', 'debt']]],
@@ -1021,11 +1093,12 @@ const NAV = [
 const PAGE_LIST = NAV.flatMap(g => g[1]);
 
 /* ---------- form fields ---------- */
-const fid = p => 'f_' + p.replace(/[^\w]/g, '_');
+let _fidN = 0;
+const fid = p => 'f_' + p.replace(/[^\w]/g, '_') + '_' + (++_fidN); // unique per rendered field
 function tipi(t) { return t ? ` <span class="tipi" tabindex="0" role="note" data-tip="${esc(esc(t))}" aria-label="${esc(t)}">?</span>` : ''; }
 function ctl(path, o = {}) {
-  const v = getPath(path), type = o.type || 'number', id = fid(path);
-  const c = `id="${id}" data-p="${esc(path)}"${o.nullable ? ' data-null="1"' : ''}${o.neg ? ' data-neg="1"' : ''}${o.aria ? ` aria-label="${esc(o.aria)}"` : ''}`;
+  const v = getPath(path), type = o.type || 'number', id = o._id || fid(path);
+  const c = `autocomplete="off" id="${id}" data-p="${esc(path)}"${o.nullable ? ' data-null="1"' : ''}${o.neg ? ' data-neg="1"' : ''}${o.aria ? ` aria-label="${esc(o.aria)}"` : ''}`;
   if (type === 'select') return `<select ${c} data-t="${o.num ? 'number' : 'text'}">${o.opts.map(x => { const [a, b] = Array.isArray(x) ? x : [x, x]; return `<option value="${esc(a)}"${String(v) === String(a) ? ' selected' : ''}>${esc(b)}</option>`; }).join('')}</select>`;
   if (type === 'checkbox') return `<input type="checkbox" ${c} ${v ? 'checked' : ''}>`;
   const min = o.min != null ? o.min : (type === 'number' && !o.neg ? 0 : null);
@@ -1033,10 +1106,10 @@ function ctl(path, o = {}) {
 }
 function fld(path, label, o = {}) {
   const type = o.type || 'number', v = getPath(path), id = fid(path);
-  if (type === 'checkbox') return `<label class="chk ${o.cls || ''}" for="${id}">${ctl(path, o)}<span>${label}${tipi(o.tip)}</span></label>`;
+  if (type === 'checkbox') return `<label class="chk ${o.cls || ''}" for="${id}">${ctl(path, { ...o, _id: id })}<span>${label}${tipi(o.tip)}</span></label>`;
   if (type === 'textarea') return `<label class="fld ${o.cls || ''}" for="${id}"><span>${label}${tipi(o.tip)}</span><textarea class="ta" id="${id}" data-p="${esc(path)}" data-t="text" rows="${o.rows || 3}" placeholder="${esc(o.ph || '')}">${esc(v)}</textarea></label>`;
-  if (type === 'range') return `<div class="fld ${o.cls || ''}"><span><label for="${id}">${label}</label>${tipi(o.tip)}</span><div class="rng">${ctl(path, o)}<b id="${id}_v" data-u="${esc(o.unit || '')}">${esc(v)}${o.unit || ''}</b></div></div>`;
-  return `<label class="fld ${o.cls || ''}" for="${id}"><span>${label}${tipi(o.tip)}</span><div class="inp">${o.pre ? `<span class="pre">${o.pre}</span>` : ''}${ctl(path, o)}${o.unit ? `<em>${o.unit}</em>` : ''}</div></label>`;
+  if (type === 'range') return `<div class="fld ${o.cls || ''}"><span><label for="${id}">${label}</label>${tipi(o.tip)}</span><div class="rng">${ctl(path, { ...o, _id: id })}<b id="${id}_v" data-u="${esc(o.unit || '')}">${esc(v)}${o.unit || ''}</b></div></div>`;
+  return `<label class="fld ${o.cls || ''}" for="${id}"><span>${label}${tipi(o.tip)}</span><div class="inp">${o.pre ? `<span class="pre">${o.pre}</span>` : ''}${ctl(path, { ...o, _id: id })}${o.unit ? `<em>${o.unit}</em>` : ''}</div></label>`;
 }
 const cell = (path, o = {}) => `<div class="inp">${o.pre ? `<span class="pre">${o.pre}</span>` : ''}${ctl(path, o)}${o.unit ? `<em>${o.unit}</em>` : ''}</div>`;
 const money = (path, label, o = {}) => fld(path, label, { pre: '฿', step: 100, ...o });
@@ -1082,7 +1155,7 @@ function assump(keys) {
     fee: () => fld('assump.fee', 'ค่าธรรมเนียมการลงทุน', { unit: '%/ปี', step: .05, max: 10 }),
     tax: () => fld('assump.tax', 'ภาษีจากผลตอบแทน', { unit: '%', step: 1, max: 60 })
   };
-  return `<details class="assump"><summary><b>สมมติฐาน</b><span class="muted" data-out="assumSum"></span></summary><div class="in"><div class="form">${keys.map(k => F[k]()).join('')}</div>${note(MODEL_NOTE + ' — ' + DISC)}</div></details>`;
+  return `<details class="assump"><summary>${ic('settings')}<b>สมมติฐาน</b><span class="muted" data-out="assumSum"></span></summary><div class="in"><div class="form">${keys.map(k => F[k]()).join('')}</div>${note(MODEL_NOTE + ' — ' + DISC)}</div></details>`;
 }
 const GLOBAL_OUTS = {
   assumSum: () => { const A = S.assump; return `Scenario ${{ cons: 'Conservative', base: 'Base', aggr: 'Aggressive' }[A.scenario]} · ผลตอบแทนสุทธิ ${pct(retRate(A.scenario) * 100, 2)} · เงินเฟ้อ ${pct(A.inflation)} · WR ${pct(A.wr)}`; }
@@ -1271,6 +1344,7 @@ function onInput(e) {
   if (el.type === 'range') { const lab = $('#' + el.id + '_v'); if (lab) lab.textContent = el.value + (lab.dataset.u || ''); }
   if (!p.startsWith('ui.')) touch();
   if (p === 'settings.theme' || p === 'settings.eng') applyTheme();
+  if (p === 'income.taxMethod') { rerender(); return; }
   refreshOuts();
 }
 document.addEventListener('input', onInput);
@@ -1306,6 +1380,8 @@ function cutLen(kinds) {
   return fis.length ? Math.min(max, Math.ceil(Math.max(...fis)) + 4) : Math.min(max, 30);
 }
 function portChart(h, kinds = ['cons', 'base', 'aggr']) {
+  if (D().invested <= 0 && D().monthly <= 0) return empty('ยังไม่มีข้อมูลพอร์ต', 'กรอกยอดลงทุนต่อเดือนและสินทรัพย์ลงทุน (หน้า Investment / Net Worth) หรือโหลดข้อมูลตัวอย่างเพื่อดูกราฟ', btn('ไปหน้า Investment', 'goInvest', { cls: 'sm' }), 'investment');
+  if (D().fi.annualExp <= 0) return empty('ยังไม่มีค่าใช้จ่าย', 'ต้องมีค่าใช้จ่ายเพื่อคำนวณ FI Target และวาดกราฟ', btn('ไปหน้า Expenses', 'goExpenses', { cls: 'sm' }), 'expenses');
   const d = D(), n = cutLen(kinds), age0 = N(S.profile.age), sel = S.assump.scenario, ps = proj(sel);
   const series = kinds.map((k, i) => ({ name: SCEN_NAME[k], color: ['var(--c6)', 'var(--c1)', 'var(--c2)'][i], pts: [[age0, d.invested], ...proj(k).rows.slice(0, n).map(r => [r.age, r.end])], area: k === sel }));
   series.push({ name: 'FI Target (ตามสมมติฐาน)', color: 'var(--c3)', dash: true, pts: [[age0, d.fi.fiNumber], ...ps.rows.slice(0, n).map(r => [r.age, r.target])] });
@@ -1444,15 +1520,22 @@ PAGES.income = {
   title: 'Income', sub: 'แหล่งรายได้ต่อเดือน ก่อนและหลังหักภาษี/ประกันสังคม',
   render() {
     const gs = [['cons', 'Conservative'], ['base', 'Base'], ['aggr', 'Aggressive']];
+    const isProg = S.income.taxMethod === 'progressive';
     return {
-      html: `<div class="grid split">${card('แหล่งรายได้ต่อเดือน (ก่อนหัก)', `<div class="form">${INC.map(([k, l]) => money('income.' + k, l)).join('')}
-        ${fld('income.taxRate', 'ภาษี + ประกันสังคม (อัตราเฉลี่ย)', { unit: '%', step: .5, max: 60, tip: 'อัตราหักรวมโดยประมาณต่อรายได้รวม ใช้แปลงรายได้รวมเป็นรายได้สุทธิ' })}</div>
+      html: `<div class="grid split">${card('แหล่งรายได้ต่อเดือน (ก่อนหัก)', `<div class="form">${INC.map(([k, l]) => money('income.' + k, l)).join('')}</div>
+        <hr class="sep">
+        <div class="form c1">${fld('income.taxMethod', 'วิธีคำนวณภาษีเงินได้บุคคลธรรมดา', { type: 'select', opts: [['flat', 'อัตราเฉลี่ย (Flat % — ประมาณการง่าย)'], ['progressive', 'ขั้นบันไดจริง (Progressive — ละเอียดขึ้น)']] })}</div>
+        ${isProg ? `<div class="form" style="margin-top:4px">${money('income.rmfssf', 'เงินสะสม RMF/SSF/PVD ต่อปี', { step: 1000, tip: 'ใช้คำนวณสิทธิลดหย่อนภาษีเท่านั้น ไม่ถูกหักออกจากรายได้สุทธิหรือบวกเข้าสินทรัพย์ลงทุนอัตโนมัติ — หากเป็นเงินออมจริง ให้กรอกแยกในหน้า Investment/Net Worth ด้วย' })}${money('income.otherDeduct', 'ลดหย่อนอื่น ๆ ต่อปี (บริจาค/บิดามารดา ฯลฯ)', { step: 1000 })}${money('income.ssoOverride', 'ประกันสังคมต่อปี (เว้นว่าง = คำนวณอัตโนมัติ)', { nullable: true, ph: String(Math.round(calcSSOAuto() * 12)), step: 100 })}</div>
+          ${note('ประมาณการเพื่อวางแผนเท่านั้น ไม่ใช่การคำนวณภาษีที่ใช้ยื่นจริง ใช้สมมติฐาน: หักค่าใช้จ่าย 50% (เพดาน 100,000) แบบเงินได้ประเภทเงินเดือนกับรายได้รวมทั้งหมด + ลดหย่อนส่วนตัว 60,000 + RMF/SSF/PVD (ไม่เกิน 30% ของรายได้หรือ 500,000) หากมีรายได้ธุรกิจ/ฟรีแลนซ์จำนวนมาก ตัวเลขจริงอาจต่างจากนี้ โปรดตรวจสอบกับกรมสรรพากรหรือผู้เชี่ยวชาญภาษี')}` : `<div class="form">${fld('income.taxRate', 'ภาษี + ประกันสังคม (อัตราเฉลี่ย)', { unit: '%', step: .5, max: 60, tip: 'อัตราหักรวมโดยประมาณต่อรายได้รวม ใช้แปลงรายได้รวมเป็นรายได้สุทธิ' })}</div>`}
         ${note('รายได้จากโมดูล Side Income (สุทธิหลังหักต้นทุน) ถูกรวมเข้ามาอัตโนมัติ — ช่อง Freelance / Software / Game ด้านบนใช้สำหรับรายได้เสริมที่ไม่ได้ติดตามรายโปรเจกต์ เพื่อป้องกันการนับซ้ำ Investment Income คือปันผล/ดอกเบี้ยที่รับเป็นเงินสด และไม่ควรนับซ้ำกับผลตอบแทนพอร์ตที่จำลอง', '')}`)}
         <div class="stack">${card('สรุปรายได้', out('incSum'))}${card('แหล่งรายได้', out('incDonut'))}${card('Main vs Side', out('incMain'))}</div></div>
+      ${isProg ? card('รายละเอียดภาษีแบบขั้นบันได', out('pitBreak'), { sub: 'ตัวเลขประมาณการ ไม่ใช่การคำนวณภาษีที่ใช้ยื่นจริง' }) : ''}
       ${assump(['scenario'])}
       ${card('Income Growth Scenario', `<div class="form" style="margin-bottom:14px">${gs.map(([k, l]) => fld('income.g.' + k, 'อัตราเติบโต ' + l, { unit: '%/ปี', step: .5, max: 50 })).join('')}${fld('income.scenario', 'Scenario ที่ใช้แสดงผล', { type: 'select', opts: gs })}</div>${out('incGrow')}`, { sub: 'รายได้สุทธิรายปี Year 1–20 (อัตราเติบโตเป็นสมมติฐานของคุณ ไม่ใช่การคาดการณ์ตลาดงาน)' })}`,
       outs: {
-        incSum: () => { const d = D().inc; return kv([['Gross Monthly Income', thb(d.gross)], ['หักภาษี/ประกันสังคม', '-' + thb(d.tax)], ['Net Monthly Income', `<b>${thb(d.net)}</b>`], ['Gross Annual Income', thb(d.grossA)], ['Net Annual Income', thb(d.netA)], ['Income Growth Rate (scenario ที่เลือก)', pct(S.income.g[S.income.scenario])]]) + frm('Net = Gross − Gross × Tax%', `${thb(d.gross)} − ${thb(d.tax)} = ${thb(d.net)}`); },
+        incSum: () => { const d = D().inc; const rows = d.method === 'progressive' ? [['Gross Monthly Income', thb(d.gross)], ['ภาษีเงินได้ (ขั้นบันได)', '-' + thb(d.taxOnly)], ['ประกันสังคม', '-' + thb(d.sso)], ['Net Monthly Income', `<b>${thb(d.net)}</b>`], ['Gross Annual Income', thb(d.grossA)], ['Net Annual Income', thb(d.netA)], ['อัตราภาษีเฉลี่ยที่แท้จริง (Effective Rate)', pct(d.effRate, 2)], ['Income Growth Rate (scenario ที่เลือก)', pct(S.income.g[S.income.scenario])]] : [['Gross Monthly Income', thb(d.gross)], ['หักภาษี/ประกันสังคม', '-' + thb(d.tax)], ['Net Monthly Income', `<b>${thb(d.net)}</b>`], ['Gross Annual Income', thb(d.grossA)], ['Net Annual Income', thb(d.netA)], ['Income Growth Rate (scenario ที่เลือก)', pct(S.income.g[S.income.scenario])]]; return kv(rows) + frm('Net = Gross − Tax − ประกันสังคม', `${thb(d.gross)} − ${thb(d.tax)} = ${thb(d.net)}`); },
+        pitBreak: () => { const d = D().inc; if (!d.deduct) return ''; const dd = d.deduct; const rows = pitBrackets(d.taxableA).map(r => `<tr><td>${thb(r.from)} – ${r.to == null ? 'ขึ้นไป' : thb(r.to)}</td><td>${r.rate}%</td><td>${thb(r.amt)}</td><td>${thb(r.tax)}</td></tr>`);
+          return kv([['รายได้รวมต่อปี', thb(D().inc.grossA)], ['หักค่าใช้จ่าย (เหมา 50%, เพดาน 100,000)', '-' + thb(dd.empDeduct)], ['หักลดหย่อนส่วนตัว', '-' + thb(dd.personal)], ['หักประกันสังคม', '-' + thb(dd.sso)], ['หัก RMF/SSF/PVD', '-' + thb(dd.rmf)], ['หักลดหย่อนอื่น ๆ', '-' + thb(dd.other)], ['เงินได้สุทธิที่ต้องเสียภาษี (Taxable Income)', `<b>${thb(d.taxableA)}</b>`], ['ภาษีที่ต้องชำระต่อปี', `<b>${thb(dd.annualTax)}</b>`], ['อัตราภาษีเฉลี่ยที่แท้จริง', pct(d.effRate, 2)], ['อัตราภาษีขั้นสูงสุดที่เจอ (Marginal Rate)', pct((pitBrackets(d.taxableA).slice(-1)[0] || { rate: 0 }).rate, 0)]]) + `<div class="tw" style="margin-top:12px"><table class="tbl"><thead><tr><th class="l">ช่วงเงินได้สุทธิ</th><th>อัตรา</th><th>จำนวนในช่วงนี้</th><th>ภาษีในช่วงนี้</th></tr></thead><tbody>${rows.join('') || '<tr><td colspan="4" class="l">เงินได้สุทธิ 0 บาท (ไม่ต้องเสียภาษี)</td></tr>'}</tbody></table></div>`; },
         incDonut: incomeDonut,
         incMain: () => { const d = D().inc; if (d.gross <= 0) return empty('ยังไม่มีรายได้', 'กรอกรายได้เพื่อดูสัดส่วน', '', 'income'); const mp = d.main / d.gross * 100, sp = d.side / d.gross * 100; return `<div class="seg" aria-hidden="true"><i style="width:${mp}%;background:var(--c1)"></i><i style="width:${Math.max(0, sp)}%;background:var(--c2)"></i><i style="width:${Math.max(0, 100 - mp - sp)}%;background:var(--c3)"></i></div><div class="legend" style="margin-top:10px"><span><i style="background:var(--c1)"></i>Main ${pct(mp, 0)}</span><span><i style="background:var(--c2)"></i>Side ${pct(sp, 0)}</span><span><i style="background:var(--c3)"></i>ปันผล/อื่น ๆ ${pct(Math.max(0, 100 - mp - sp), 0)}</span></div>`; },
         incGrow: () => {
@@ -1601,7 +1684,7 @@ PAGES.career = {
     } else if (t === 'gap') {
       body = `<div class="grid split">${card('เป้าหมายอาชีพ', `<div class="form c1">${fld('career.role', 'Target Role', { type: 'select', opts: ROLES })}${money('income.base', 'Current Salary (เงินเดือนประจำ)', { step: 1000 })}${money('career.targetSalary', 'Target Salary (ต่อเดือน)', { step: 1000 })}${fld('profile.fiTargetAge', 'เป้าหมายอายุที่ถึง FI', { unit: 'ปี', step: 1, min: 20, max: 90 })}</div>`)}${card('Career Income Gap', out('carGap'))}</div>${assump(['scenario', 'inflation', 'wr', 'expG', 'cg', 'mode'])}`;
       outs = {
-        carGap: () => { const c = calculateCareerImpact(); return kv([['Target Salary − Current Salary', `<b>${thb(c.gap)}</b>/เดือน`], ['ต่างจากปัจจุบัน', c.cur > 0 ? pct(c.gap / c.cur * 100, 0) : '—'], ['ยอดลงทุน/เดือนที่ต้องมีเพื่อถึง FI อายุ ' + c.tAge, c.req == null ? 'เป็นไปไม่ได้ในสมมติฐานนี้' : thb(c.req)], ['ยอดลงทุนปัจจุบัน', thb(D().monthly)], ['Additional Monthly Income Needed', c.extraGross == null ? '—' : `<b>${thb(c.extraGross)}</b>`]]) + `<p class="hint" style="margin-top:8px">“Additional Monthly Income Needed” = รายได้รวมที่ต้องเพิ่ม (ก่อนหักภาษี) หากนำส่วนเพิ่มสุทธิไปลงทุนทั้งหมดเพื่อถึง FI ตามอายุเป้าหมายภายใต้สมมติฐานปัจจุบัน — เป็นตัวเลขเพื่อเปรียบเทียบตัวเลือก ไม่ใช่เป้าที่ต้องทำให้ได้</p>` + frm('Extra Gross = max(0, Required − Current Investment) / (1 − Tax%)', c.req == null ? '' : `${thb(c.extraInv)} / ${(1 - N(S.income.taxRate) / 100).toFixed(3)}`); }
+        carGap: () => { const c = calculateCareerImpact(); return kv([['Target Salary − Current Salary', `<b>${thb(c.gap)}</b>/เดือน`], ['ต่างจากปัจจุบัน', c.cur > 0 ? pct(c.gap / c.cur * 100, 0) : '—'], ['ยอดลงทุน/เดือนที่ต้องมีเพื่อถึง FI อายุ ' + c.tAge, c.req == null ? 'เป็นไปไม่ได้ในสมมติฐานนี้' : thb(c.req)], ['ยอดลงทุนปัจจุบัน', thb(D().monthly)], ['Additional Monthly Income Needed', c.extraGross == null ? '—' : `<b>${thb(c.extraGross)}</b>`]]) + `<p class="hint" style="margin-top:8px">“Additional Monthly Income Needed” = รายได้รวมที่ต้องเพิ่ม (ก่อนหักภาษี) หากนำส่วนเพิ่มสุทธิไปลงทุนทั้งหมดเพื่อถึง FI ตามอายุเป้าหมายภายใต้สมมติฐานปัจจุบัน — เป็นตัวเลขเพื่อเปรียบเทียบตัวเลือก ไม่ใช่เป้าที่ต้องทำให้ได้</p>` + frm('Extra Gross = max(0, Required − Current Investment) / (1 − Tax%)', c.req == null ? '' : `${thb(c.extraInv)} / ${(1 - taxRatePct() / 100).toFixed(3)}`); }
       };
     } else if (t === 'roi') {
       const rows = S.career.roi.map((x, i) => `<tr><td class="txt l">${cell(`career.roi.${i}.name`, { type: 'text', aria: 'ชื่อทักษะ' })}</td><td>${cell(`career.roi.${i}.cost`, { pre: '฿', aria: 'ค่าเรียน' })}</td><td>${cell(`career.roi.${i}.hours`, { unit: 'ชม.', aria: 'ชั่วโมงที่ใช้' })}</td><td>${cell(`career.roi.${i}.inc`, { pre: '฿', aria: 'เงินเดือนที่เพิ่ม/เดือน' })}</td><td><button class="btn sm ic gh dng" data-act="delRoi" data-arg="${i}" aria-label="ลบรายการ">${ic('trash')}</button></td></tr>`);
@@ -1612,7 +1695,7 @@ PAGES.career = {
     } else {
       body = `<div class="grid split">${card('Skill Upgrade Impact', `<div class="form c1">${money('income.base', 'Current Salary', { step: 1000 })}${money('career.upg.newSalary', 'New Salary หลังยกระดับทักษะ', { step: 1000 })}${money('career.upg.extra', 'Extra Investment (เพิ่มจากที่ลงทุนอยู่)/เดือน', { step: 500 })}${fld('career.upg.delay', 'ใช้เวลากี่ปีกว่าจะได้รายได้ใหม่', { unit: 'ปี', step: 1, max: 20 })}</div><div style="margin-top:10px">${btn('ใช้ Target Salary ของฉัน', 'useTarget', { cls: 'sm' })}</div>${note('จำลองว่าหากทักษะเพิ่ม → รายได้เพิ่ม → ลงทุนเพิ่มตามที่ระบุ → FI Age เปลี่ยนอย่างไร ค่าใช้จ่ายถือว่าเท่าเดิม')}`)}${card('ผลลัพธ์', out('upgSum'))}</div>${assump(['scenario', 'inflation', 'wr', 'expG', 'cg', 'mode'])}${card('Without vs With Skill Upgrade', out('upgChart') + out('upgTable'))}`;
       outs = {
-        upgSum: () => { const u = skillUpgrade(), a = u.without, b = u.withU, d = (a.fiYears != null && b.fiYears != null) ? a.fiYears - b.fiYears : null; return `<div class="grid g2" style="margin-bottom:0"><div><div class="hint">Without Skill Upgrade</div><div class="big">${fiAgeText(a)}</div></div><div><div class="hint">With Skill Upgrade</div><div class="big" style="color:var(--ok)">${fiAgeText(b)}</div></div></div>` + kv([['เร็วขึ้น', d == null ? '—' : yrsTxt(d)], ['เงินเดือนเพิ่มสุทธิ/เดือน (หลังหัก ' + S.income.taxRate + '%)', thb(u.raiseNet)], ['Extra Investment/เดือน', thb(S.career.upg.extra)]]) + (N(S.career.upg.extra) > u.raiseNet + Math.max(0, D().surplus) ? note('ยอดลงทุนเพิ่มสูงกว่าส่วนเพิ่มสุทธิและกระแสเงินสดคงเหลือ อาจต้องปรับค่าใช้จ่ายเพื่อให้เป็นไปได้', 'warn') : ''); },
+        upgSum: () => { const u = skillUpgrade(), a = u.without, b = u.withU, d = (a.fiYears != null && b.fiYears != null) ? a.fiYears - b.fiYears : null; return `<div class="grid g2" style="margin-bottom:0"><div><div class="hint">Without Skill Upgrade</div><div class="big">${fiAgeText(a)}</div></div><div><div class="hint">With Skill Upgrade</div><div class="big" style="color:var(--ok)">${fiAgeText(b)}</div></div></div>` + kv([['เร็วขึ้น', d == null ? '—' : yrsTxt(d)], ['เงินเดือนเพิ่มสุทธิ/เดือน (หลังหักภาษีเฉลี่ย ' + pct(taxRatePct(), 1) + ')', thb(u.raiseNet)], ['Extra Investment/เดือน', thb(S.career.upg.extra)]]) + (N(S.career.upg.extra) > u.raiseNet + Math.max(0, D().surplus) ? note('ยอดลงทุนเพิ่มสูงกว่าส่วนเพิ่มสุทธิและกระแสเงินสดคงเหลือ อาจต้องปรับค่าใช้จ่ายเพื่อให้เป็นไปได้', 'warn') : ''); },
         upgChart: () => { const u = skillUpgrade(), n = Math.max(cutLen([S.assump.scenario]), 10), a0 = N(S.profile.age), d = D(); return lineChart({ series: [{ name: 'Without', color: 'var(--c6)', pts: [[a0, d.invested], ...u.without.rows.slice(0, n).map(r => [r.age, r.end])] }, { name: 'With Skill Upgrade', color: 'var(--c2)', area: true, pts: [[a0, d.invested], ...u.withU.rows.slice(0, n).map(r => [r.age, r.end])] }, { name: 'FI Target', color: 'var(--c3)', dash: true, pts: [[a0, d.fi.fiNumber], ...u.without.rows.slice(0, n).map(r => [r.age, r.target])] }], xFmt: v => 'อายุ ' + Math.round(v), h: 240 }); },
         upgTable: () => { const u = skillUpgrade(), n = Math.min(cutLen([S.assump.scenario]), 25); return '<div class="scroll-y" style="margin-top:12px">' + table(['Year', 'Age', 'Without', 'With Upgrade', 'ผลต่าง'], u.without.rows.slice(0, n).map((r, i) => { const w = u.withU.rows[i]; return `<tr><td>${r.t}</td><td>${r.age}</td><td>${thb(r.end)}</td><td>${thb(w.end)}</td><td>${thb(w.end - r.end)}</td></tr>`; })) + '</div>'; }
       };
@@ -1657,6 +1740,45 @@ PAGES.ownership = {
 };
 
 /* =====================================================================
+   18b. SENSITIVITY ANALYSIS (one-at-a-time tornado)
+   ===================================================================== */
+function sensitivity() {
+  const d = D(); if (d.fi.annualExp <= 0 || (d.invested <= 0 && d.monthly <= 0)) return null;
+  const base = proj(); const horizon = N(S.assump.horizonAge), age0 = N(S.profile.age);
+  const cap = horizon; const eff = p => p.fiAge != null ? p.fiAge : cap;
+  const baseAge = eff(base);
+  const retPct = N(S.assump.ret[S.assump.scenario]);
+  const mk = (label, unit, delta, lo, hi, loT, hiT) => { const L = projectBase(null, lo), H = projectBase(null, hi); const loAge = eff(L), hiAge = eff(H); return { label, unit, delta, loAge, hiAge, loOpen: L.fiAge == null, hiOpen: H.fiAge == null, loLab: (L.fiAge == null ? '> ' : '') + ageF(loAge) + (loT ? ' · ' + loT : ''), hiLab: (H.fiAge == null ? '> ' : '') + ageF(hiAge) + (hiT ? ' · ' + hiT : ''), mag: Math.abs(hiAge - loAge) }; };
+  const items = [
+    mk('ผลตอบแทนการลงทุน', 'pp', 2, { ret: netRet(retPct - 2) }, { ret: netRet(retPct + 2) }, pct(retPct - 2, 1), pct(retPct + 2, 1)),
+    mk('ยอดลงทุนต่อเดือน', '%', 20, { monthly: d.monthly * 0.8 }, { monthly: d.monthly * 1.2 }, thb(d.monthly * 0.8), thb(d.monthly * 1.2)),
+    mk('ค่าใช้จ่าย (กำหนด FI Number)', '%', 10, { expAnnual: d.fi.annualExp * 1.1 }, { expAnnual: d.fi.annualExp * 0.9 }, thb(d.fi.annualExp * 1.1 / 12) + '/ด.', thb(d.fi.annualExp * 0.9 / 12) + '/ด.'),
+    mk('อัตราถอน (Withdrawal Rate)', 'pp', 0.5, { wr: Math.max(.5, N(S.assump.wr) - 0.5) }, { wr: N(S.assump.wr) + 0.5 }, pct(Math.max(.5, N(S.assump.wr) - 0.5), 2), pct(N(S.assump.wr) + 0.5, 2)),
+    mk('ค่าใช้จ่ายโตปีละ (Lifestyle Inflation)', 'pp', 2, { expG: Math.max(0, N(S.assump.expG) - 2) }, { expG: N(S.assump.expG) + 2 }, pct(Math.max(0, N(S.assump.expG) - 2), 1), pct(N(S.assump.expG) + 2, 1)),
+    mk('ยอดลงทุนเพิ่มปีละ', 'pp', 3, { cg: Math.max(0, N(S.assump.cg) - 3) }, { cg: N(S.assump.cg) + 3 }, pct(Math.max(0, N(S.assump.cg) - 3), 1), pct(N(S.assump.cg) + 3, 1))
+  ].sort((a, b) => b.mag - a.mag);
+  return { baseAge, baseOpen: base.fiAge == null, horizon, age0, items };
+}
+function sensTornado() {
+  const S2 = sensitivity();
+  if (!S2) return empty('ยังไม่มีข้อมูลพอ', 'ต้องมีค่าใช้จ่าย และยอดลงทุนหรือสินทรัพย์ลงทุน เพื่อวิเคราะห์ความอ่อนไหว', btn('ไปหน้า Investment', 'goInvest', { cls: 'sm' }), 'fi');
+  const { baseAge, items, horizon, age0 } = S2;
+  const all = items.flatMap(it => [it.loAge, it.hiAge]).concat([baseAge, age0]);
+  const min = Math.min(...all), max = Math.max(...all, horizon);
+  const span = Math.max(1, max - min), pO = v => clamp((v - min) / span * 100, 0, 100);
+  const bx = pO(baseAge);
+  const rows = items.map(it => {
+    const x1 = pO(it.loAge), x2 = pO(it.hiAge), left = Math.min(x1, x2), width = Math.max(0.8, Math.abs(x2 - x1));
+    let seg;
+    if (bx > left && bx < left + width) seg = `<div class="tor-seg" style="left:${left}%;width:${(bx - left).toFixed(2)}%;background:var(--c6)"></div><div class="tor-seg" style="left:${bx}%;width:${(left + width - bx).toFixed(2)}%;background:var(--ac)"></div>`;
+    else seg = `<div class="tor-seg" style="left:${left}%;width:${width.toFixed(2)}%;background:${x2 >= x1 ? 'var(--ac)' : 'var(--c6)'}"></div>`;
+    const tip1 = esc(`<b>${esc(it.label)} ลด ${it.delta}${it.unit === 'pp' ? ' จุด' : '%'}</b><div class="r"><span>FI Age</span><b>${esc(it.loLab)}</b></div>`), tip2 = esc(`<b>${esc(it.label)} เพิ่ม ${it.delta}${it.unit === 'pp' ? ' จุด' : '%'}</b><div class="r"><span>FI Age</span><b>${esc(it.hiLab)}</b></div>`);
+    return `<div class="tor-row"><div class="tor-label">${esc(it.label)}<small>±${it.delta}${it.unit === 'pp' ? ' จุด' : '%'}</small></div><div><div class="tor-track">${seg}<div class="tor-base" style="left:${bx}%"></div><div class="tor-end" style="left:${x1}%;border-color:var(--c6)" data-tip="${tip1}"></div><div class="tor-end" style="left:${x2}%;border-color:var(--ac)" data-tip="${tip2}"></div></div><div class="tor-vals"><span>${esc(it.loLab)}</span><span>${esc(it.hiLab)}</span></div></div></div>`;
+  }).join('');
+  return `<div class="tor">${rows}</div><div class="legend" style="margin-top:10px"><span><i style="background:var(--tx3)"></i>Base Case ${S2.baseOpen ? '&gt; ' : ''}${ageF(baseAge)}</span><span><i style="background:var(--c6)"></i>ค่าต่ำกว่าฐาน</span><span><i style="background:var(--ac)"></i>ค่าสูงกว่าฐาน</span></div>` + (S2.baseOpen ? note('กรณีฐานยังไม่ถึง FI ภายในช่วงอายุที่จำลอง (ถึงอายุ ' + horizon + ') แท่งด้านบนจึงใช้เพดานอายุจำลองแทนค่าที่แท้จริงในบางกรณี', 'warn') : '');
+}
+
+/* =====================================================================
    19. FI CALCULATOR (number / age / models / ratio / inflation)
    ===================================================================== */
 PAGES.fi = {
@@ -1688,6 +1810,9 @@ PAGES.fi = {
         fiRatio: () => { const d = D(), r = d.ratio; if (d.fi.annualExp <= 0) return empty('ยังไม่มีค่าใช้จ่าย', 'กรอกค่าใช้จ่ายเพื่อคำนวณ FI Ratio', '', 'fi'); const l = fiLabel(r.r), rp = r.r * 100;
           return `<div class="row" style="align-items:flex-end;flex-wrap:wrap;gap:10px"><div><span class="big">${pct(rp, 1)}</span></div>${badge(l[0], l[1] + ' badge-lg')}</div><div style="margin:14px 0 2px">${prog(rp, l[1] === 'bad' ? 'bad' : l[1] === 'warn' ? 'warn' : 'ok', true)}<div class="scale">${[0, 10, 25, 50, 75, 100].map(t => `<span class="tick" style="left:${t}%">${t}%</span>`).join('')}</div></div>` + kv([['Portfolio-supported annual income', thb(r.pIncome)], ['Annual Expenses', thb(d.fi.annualExp)], ['FI Ratio รวมรายได้เสริม + ปันผล (ข้อมูลเสริม)', pct(r.r2 * 100, 1)]]) + frm('FI Ratio = (Invested Assets × Withdrawal Rate) / Annual Expenses', `${thb(d.invested)} × ${pct(S.assump.wr, 2)} / ${thb(d.fi.annualExp)}`) + note('เกณฑ์ป้ายกำกับ: &lt; 25% Dependent on Job · 25–75% Partially Independent · 75–100% Highly Independent · ≥ 100% Financially Independent — นี่เป็นเกณฑ์ตามโมเดลของแอป ไม่ใช่มาตรฐานสากลตายตัว'); }
       };
+    } else if (t === 'sensitivity') {
+      body = `${card('Sensitivity Analysis', out('sensOut'), { sub: 'ปรับตัวแปรทีละตัว (±ตามที่กำหนด) รอบ ๆ ค่าปัจจุบัน เพื่อดูว่าตัวแปรใดส่งผลต่อ Estimated FI Age มากที่สุด เรียงจากผลกระทบมากไปน้อย' })}${note('เป็นการวิเคราะห์ความอ่อนไหวแบบทีละตัวแปร (one-at-a-time) ไม่ใช่การจำลองความน่าจะเป็นแบบ Monte Carlo และไม่ได้คำนึงถึงความสัมพันธ์ระหว่างตัวแปร (เช่น ผลตอบแทนสูงมักมาพร้อมความผันผวนสูง) ใช้เพื่อจัดลำดับความสำคัญว่าควรโฟกัสที่ตัวแปรใดก่อน ' + MODEL_NOTE)}`;
+      outs = { sensOut: sensTornado };
     } else {
       const a = 'tools.fc', b = 'tools.pp';
       body = `<div class="grid g2">${card('เงินวันนี้จะมีมูลค่าเท่าไรในอนาคต', `<div class="form">${money(a + '.cost', 'ค่าใช้จ่าย/เดือนวันนี้', { step: 1000 })}${fld(a + '.infl', 'Inflation', { unit: '%/ปี', step: .1, max: 30 })}${fld(a + '.years', 'อีกกี่ปี', { unit: 'ปี', step: 1, max: 80 })}</div><div style="margin-top:12px">${out('fcOut')}</div>`)}${card('Purchasing Power', `<div class="form">${money(b + '.salary', 'Current Salary', { step: 1000 })}${fld(b + '.infl', 'Inflation', { unit: '%/ปี', step: .1, max: 30 })}${fld(b + '.years', 'Years', { unit: 'ปี', step: 1, max: 80 })}</div><div style="margin-top:12px">${out('ppOut')}</div>`)}</div>${card('ตารางเทียบตามจำนวนปี', out('inflTbl'))}`;
@@ -1697,7 +1822,7 @@ PAGES.fi = {
         inflTbl: () => { const infl = N(S.tools.fc.infl) / 100; return table(['ปี', 'ค่าใช้จ่ายในอนาคต', 'เงินเดือนที่ต้องมี', 'เงินเดือนเท่าเดิมเหลืออำนาจซื้อ'], [5, 10, 20, 30, 40].map(y => { const k = Math.pow(1 + infl, y); return `<tr><td>${y} ปี</td><td>${thb(N(S.tools.fc.cost) * k)}</td><td>${thb(N(S.tools.pp.salary) * k)}</td><td>${thb(N(S.tools.pp.salary) / k)}</td></tr>`; })); }
       };
     }
-    return { html: tabs('fi', [['number', 'FI Number'], ['age', 'FI Age'], ['models', 'รูปแบบ FI'], ['ratio', 'FI Ratio'], ['inflation', 'เงินเฟ้อและอำนาจซื้อ']]) + body, outs };
+    return { html: tabs('fi', [['number', 'FI Number'], ['age', 'FI Age'], ['models', 'รูปแบบ FI'], ['ratio', 'FI Ratio'], ['sensitivity', 'Sensitivity Analysis'], ['inflation', 'เงินเฟ้อและอำนาจซื้อ']]) + body, outs };
   }
 };
 /* =====================================================================
@@ -1811,10 +1936,19 @@ PAGES.monthly = {
     const habits = S.habits.items.map((h, i) => { const on = !!h.checks[periodKey(h.freq, 0)]; return `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><label class="chk"><input type="checkbox" data-act="toggleHabit" data-arg="${i}" ${on ? 'checked' : ''} aria-label="${esc(h.label)}"><span>${esc(h.label)} <span class="badge">${FREQ[h.freq] || h.freq}</span></span></label><span class="row" style="gap:6px"><span class="mono muted" data-tip="ทำต่อเนื่องกี่ช่วงเวลา (streak)">${habitStreak(h)} ${{ daily: 'วัน', weekly: 'สัปดาห์', monthly: 'เดือน', quarterly: 'ไตรมาส', yearly: 'ปี' }[h.freq]}</span><button class="btn sm ic gh dng" data-act="delHabit" data-arg="${i}" aria-label="ลบนิสัย">${ic('trash')}</button></span></div>`; }).join('');
     return {
       html: `<div class="grid split">${card('บันทึกรีวิว', `<div class="form">${fld('ui.draft.month', 'เดือน', { type: 'month' })}${money('ui.draft.income', 'Income')}${money('ui.draft.expense', 'Expense')}${money('ui.draft.invest', 'Investment')}${money('ui.draft.side', 'Side Income')}${money('ui.draft.debt', 'Debt Payment')}${money('ui.draft.nw', 'Net Worth', { neg: true })}</div><div class="form c1" style="margin-top:14px">${Q.map((q, i) => fld('ui.draft.q' + (i + 1), q, { type: 'textarea', rows: 2 })).join('')}</div>`, { actions: btn('ดึงจากข้อมูลปัจจุบัน', 'prefillReview', { cls: 'sm', icon: 'refresh' }) + btn('บันทึกรีวิว', 'saveReview', { cls: 'sm pri', icon: 'save' }) })}
-        <div class="stack">${card('Financial Habits', `<div>${habits}</div><div class="btnrow" style="margin-top:12px">${btn('เพิ่มนิสัย', 'addHabit', { cls: 'sm', icon: 'plus' })}</div><p class="hint" style="margin-top:8px">ติ๊กเมื่อทำในช่วงเวลาปัจจุบัน Streak นับต่อเนื่องย้อนหลัง</p>`)}${card('แนวโน้มรายเดือน', out('revChart'))}</div></div>${card('ประวัติรีวิว', out('revHist'))}`,
+        <div class="stack">${card('Financial Habits', `<div>${habits}</div><div class="btnrow" style="margin-top:12px">${btn('เพิ่มนิสัย', 'addHabit', { cls: 'sm', icon: 'plus' })}</div><p class="hint" style="margin-top:8px">ติ๊กเมื่อทำในช่วงเวลาปัจจุบัน Streak นับต่อเนื่องย้อนหลัง</p>`)}${card('แนวโน้มรายเดือน', out('revChart'))}</div></div>
+      <h2 class="sec">ของจริงเทียบแผน</h2>
+      <div class="grid split">${card('สรุปค่าเฉลี่ย: จริง vs แผนปัจจุบัน', out('avpSum'))}${card('Net Worth: จริง vs แผน', out('avpNW'), { sub: 'เส้นแผนจำลองย้อนหลังจากเดือนแรกที่บันทึก โดยใช้สมมติฐานปัจจุบัน' })}</div>
+      ${card('ประวัติรีวิว', out('revHist'))}`,
       outs: {
         revChart: () => { const R = S.monthlyReviews.slice().sort((a, b) => a.month < b.month ? -1 : 1).slice(-12); return R.length < 2 ? empty('ต้องมีอย่างน้อย 2 เดือน', 'บันทึกรีวิวรายเดือนเพื่อดูแนวโน้ม', '', 'calendar') : barChart({ cats: R.map(r => r.month.slice(2)), series: [{ name: 'Income', color: 'var(--c1)', vals: R.map(r => N(r.income)) }, { name: 'Expense', color: 'var(--c5)', vals: R.map(r => N(r.expense)) }, { name: 'Investment', color: 'var(--c2)', vals: R.map(r => N(r.invest)) }], h: 220, tipFmt: thb }); },
-        revHist: () => { const R = S.monthlyReviews.map((r, i) => [r, i]).sort((a, b) => a[0].month < b[0].month ? 1 : -1); return R.length ? '<div class="scroll-y">' + table(['เดือน', 'Income', 'Expense', 'Investment', 'Net Worth', ''], R.map(([r, i]) => `<tr><td>${esc(r.month)}</td><td>${thb(r.income)}</td><td>${thb(r.expense)}</td><td>${thb(r.invest)}</td><td>${thb(r.nw)}</td><td style="white-space:nowrap"><button class="btn sm gh" data-act="editReview" data-arg="${i}">แก้ไข</button><button class="btn sm ic gh dng" data-act="delReview" data-arg="${i}" aria-label="ลบรีวิว ${esc(r.month)}">${ic('trash')}</button></td></tr>`)) + '</div>' : empty('ยังไม่มีรีวิว', 'กรอกฟอร์มด้านบนแล้วกด “บันทึกรีวิว”', '', 'calendar'); }
+        revHist: () => { const R = S.monthlyReviews.map((r, i) => [r, i]).sort((a, b) => a[0].month < b[0].month ? 1 : -1); return R.length ? '<div class="scroll-y">' + table(['เดือน', 'Income', 'Expense', 'Investment', 'Net Worth', ''], R.map(([r, i]) => `<tr><td>${esc(r.month)}</td><td>${thb(r.income)}</td><td>${thb(r.expense)}</td><td>${thb(r.invest)}</td><td>${thb(r.nw)}</td><td style="white-space:nowrap"><button class="btn sm gh" data-act="editReview" data-arg="${i}">แก้ไข</button><button class="btn sm ic gh dng" data-act="delReview" data-arg="${i}" aria-label="ลบรีวิว ${esc(r.month)}">${ic('trash')}</button></td></tr>`)) + '</div>' : empty('ยังไม่มีรีวิว', 'กรอกฟอร์มด้านบนแล้วกด “บันทึกรีวิว”', '', 'calendar'); },
+        avpSum: () => { const a = actualVsPlan(); if (!a) return empty('ยังไม่มีข้อมูล', 'บันทึก Monthly Review อย่างน้อย 1 เดือนเพื่อเปรียบเทียบกับแผนปัจจุบัน', '', 'calendar');
+          const row = (label, actual, plan, lowerBetter) => { const diff = actual - plan, pctD = plan !== 0 ? diff / plan * 100 : 0, good = lowerBetter ? diff <= 0 : diff >= 0, ratio = plan > 0 ? clamp(actual / plan * 100, 0, 160) : 0; return `<div class="pl"><div class="row"><span>${label}</span><span class="mono">${thb(actual)} <span class="muted">(แผน ${thb(plan)})</span></span></div>${prog(ratio, good ? 'ok' : 'warn')}<span class="hint">${diff >= 0 ? '+' : ''}${thb(diff)} (${pctD >= 0 ? '+' : ''}${pct(pctD, 1)}) เทียบแผนปัจจุบัน</span></div>`; };
+          return `<p class="hint" style="margin-bottom:10px">ค่าเฉลี่ยจาก ${a.rows.length} เดือนที่บันทึกไว้ เทียบกับแผนปัจจุบัน (Income/Expense/Investment ล่าสุดในระบบ ณ ตอนนี้ — หากคุณปรับสมมติฐานไปเรื่อย ๆ ตัวเลข “แผน” จะขยับตาม ไม่ใช่แผนที่ตั้งไว้ ณ ขณะนั้น)</p>` + row('Income', a.incAvg, a.planInc, false) + row('Expense', a.expAvg, a.planExp, true) + row('Investment', a.invAvg, a.planInv, false) + (a.streak >= 2 ? note(`ค่าใช้จ่ายจริงสูงกว่าแผนติดต่อกัน ${a.streak} เดือนล่าสุด`, 'warn') : ''); },
+        avpNW: () => { const a = actualVsPlan(); if (!a) return empty('ยังไม่มีข้อมูล', 'บันทึก Monthly Review เพื่อดูกราฟ', '', 'calendar'); if (!a.nwSeries) return empty('ต้องมีอย่างน้อย 2 เดือน', 'บันทึกรีวิวอีกอย่างน้อย 1 เดือนเพื่อเริ่มเห็นเส้นเปรียบเทียบ', '', 'calendar');
+          const pts = k => a.nwSeries.filter(r => r[k] != null).map(r => [dayNum(r.month + '-01'), r[k]]);
+          return lineChart({ series: [{ name: 'แผน (จำลองจากสมมติฐานปัจจุบัน)', color: 'var(--c6)', dash: true, pts: pts('plan') }, { name: 'ของจริง', color: 'var(--ac)', area: true, pts: pts('actual') }], xFmt: v => fmtDate(dayIso(v)), h: 230, label: 'Net Worth จริง vs แผน' }) + (a.lastGapPct != null ? `<p class="hint" style="margin-top:8px">ล่าสุดต่างจากแผน ${a.lastGapPct >= 0 ? '+' : ''}${pct(a.lastGapPct, 1)}</p>` : ''); }
       }
     };
   }
@@ -1918,6 +2052,7 @@ PAGES.settings = {
    28. ACTIONS
    ===================================================================== */
 const NAVG = { goIncome: 'income', goDebt: 'debt', goExpenses: 'expenses', goCareer: 'career', goSide: 'side', goRules: 'rules' };
+NAVG.goInvest = 'investment';
 Object.entries(NAVG).forEach(([k, v]) => ACT[k] = () => go(v));
 ACT.goReport = () => { ui.report = true; go('reports'); };
 ACT.genReport = () => { ui.report = true; $('#view').innerHTML = '<div class="skel" style="height:420px"></div>'; setTimeout(() => { renderPage(); toast('สร้างรายงานแล้ว'); }, 180); };
